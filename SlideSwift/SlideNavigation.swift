@@ -9,17 +9,17 @@
 import UIKit
 
 enum SlideMenu {
-    case MenuLeft
-    case MenuRight
+    case menuLeft
+    case menuRight
 }
 
 protocol SlideNavigationControllerAnimator : NSObjectProtocol {
-    func prepareMenuForAnimation(menu : SlideMenu)
-    func animate(menu : SlideMenu, withProgress progress:CGFloat)
+    func prepareMenuForAnimation(_ menu : SlideMenu)
+    func animate(_ menu : SlideMenu, withProgress progress:CGFloat)
     func clear()
 }
 
-protocol SSlideNavigationControllerDelegate {
+@objc protocol SSlideNavigationControllerDelegate : NSObjectProtocol {
     func slideNavigationControllerShouldDisplayRightMenu() -> Bool
     func slideNavigationControllerShouldDisplayLeftMenu() -> Bool
 }
@@ -34,8 +34,8 @@ let SlideNavigationControllerDidReveal = "SlideNavigationControllerDidReveal"
 
 class SlideNavigationController: UINavigationController, UINavigationControllerDelegate, UIGestureRecognizerDelegate {
     enum PopType {
-        case All
-        case Root
+        case all
+        case root
     }
     
     var avoidSwitchingToSameClassViewController = true
@@ -52,12 +52,12 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
         didSet(oldValue) {
             if enableShadow {
                 let layer = self.view.layer
-                layer.shadowColor = UIColor.blackColor().CGColor
+                layer.shadowColor = UIColor.black.cgColor
                 layer.shadowRadius = 10
                 layer.shadowOpacity = 1
-                layer.shadowPath = UIBezierPath(rect: self.view.bounds).CGPath
+                layer.shadowPath = UIBezierPath(rect: self.view.bounds).cgPath
                 layer.shouldRasterize = true
-                layer.rasterizationScale = UIScreen.mainScreen().scale
+                layer.rasterizationScale = UIScreen.main.scale
             } else {
                 self.view.layer.shadowOpacity = 0
                 self.view.layer.shadowRadius = 0
@@ -81,22 +81,22 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
     var portraitSlideOffset = CGFloat(MENU_DEFAULT_SLIDE_OFFSET)
     var landscapeSlideOffset = CGFloat(MENU_DEFAULT_SLIDE_OFFSET)
     var panGestureSideOffset = CGFloat(0)
-    var menuRevealAnimator : protocol<SlideNavigationControllerAnimator>? {
+    var menuRevealAnimator : SlideNavigationControllerAnimator? {
         willSet(newAnimator) {
             menuRevealAnimator?.clear()
         }
     }
-    var menuRevealAnimationDuration = NSTimeInterval(MENU_SLIDE_ANIMATION_DURATION)
-    var menuRevealAnimationOption = UIViewAnimationOptions.CurveEaseOut
+    var menuRevealAnimationDuration = TimeInterval(MENU_SLIDE_ANIMATION_DURATION)
+    var menuRevealAnimationOption = UIViewAnimationOptions.curveEaseOut
     
     
-    private lazy var tapRecognizer : UITapGestureRecognizer! = UITapGestureRecognizer(target: self, action: "tapDetected:")
-    private lazy var panRecognizer : UIPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: "panDetected:")
+    fileprivate lazy var tapRecognizer : UITapGestureRecognizer! = UITapGestureRecognizer(target: self, action: #selector(SlideNavigationController.tapDetected(_:)))
+    fileprivate lazy var panRecognizer : UIPanGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(SlideNavigationController.panDetected(_:)))
     
-    private var draggingPoint = CGPointZero
+    fileprivate var draggingPoint = CGPoint.zero
     
-    private var menuNeedsLayout = false
-    private var lastRevealedMenu : SlideMenu?
+    fileprivate var menuNeedsLayout = false
+    fileprivate var lastRevealedMenu : SlideMenu?
     
     static var sharedInstance: SlideNavigationController? {
         get { return singletonInstance }
@@ -125,14 +125,14 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
         if !enableShadow {
-            self.view.layer.shadowPath = UIBezierPath(rect: self.view.bounds).CGPath
+            self.view.layer.shadowPath = UIBezierPath(rect: self.view.bounds).cgPath
         }
         enableTapGestureToCloseMenu(false)
         if menuNeedsLayout {
             self.updateMenuFrameAndTransformAccordingToOrientation()
             
-            if  isMenuOpen && UIDevice.currentDevice().systemVersion.compare("8.0", options:.NumericSearch, range: nil, locale: nil) != NSComparisonResult.OrderedAscending {
-                let menu: SlideMenu = horizontalLocation > 0 ? .MenuLeft : .MenuRight
+            if  isMenuOpen && UIDevice.current.systemVersion.compare("8.0", options:.numeric, range: nil, locale: nil) != ComparisonResult.orderedAscending {
+                let menu: SlideMenu = horizontalLocation > 0 ? .menuLeft : .menuRight
                 open(menu, withDuration: 0, andCompletion: nil)
             }
             
@@ -140,25 +140,25 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
         }
     }
     
-    override func viewWillTransitionToSize(size: CGSize, withTransitionCoordinator coordinator: UIViewControllerTransitionCoordinator) {
-        super.viewWillTransitionToSize(size, withTransitionCoordinator: coordinator)
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
         menuNeedsLayout = true
     }
     
-    override func willRotateToInterfaceOrientation(toInterfaceOrientation: UIInterfaceOrientation, duration: NSTimeInterval) {
-        super.willRotateToInterfaceOrientation(toInterfaceOrientation, duration: duration)
+    override func willRotate(to toInterfaceOrientation: UIInterfaceOrientation, duration: TimeInterval) {
+        super.willRotate(to: toInterfaceOrientation, duration: duration)
         menuNeedsLayout = true
     }
     
-    func bounce(menu: SlideMenu, withCompletion completion:(()->Void)?) {
+    func bounce(_ menu: SlideMenu, withCompletion completion:(()->Void)?) {
         prepareMenuForReveal(menu)
-        let movementDirection = (menu == .MenuLeft) ? CGFloat(1) : CGFloat(-1)
-        UIView.animateWithDuration(0.16, delay: 0, options: UIViewAnimationOptions.CurveEaseOut, animations: {self.moveHorizontallyToLocation(30 * movementDirection)}) { (_) -> Void in
-            UIView.animateWithDuration(0.1, delay: 0, options: .CurveEaseIn, animations: {self.moveHorizontallyToLocation(0)}) { (_) -> Void in
-                UIView.animateWithDuration(0.12, delay: 0, options: .CurveEaseOut, animations: {self.moveHorizontallyToLocation(16 * movementDirection) }) { (_) -> Void in
-                    UIView.animateWithDuration(0.08, delay: 0, options: .CurveEaseIn, animations: { self.moveHorizontallyToLocation(0) }) { (_) -> Void in
-                        UIView.animateWithDuration(0.08, delay: 0, options: .CurveEaseOut, animations: { self.moveHorizontallyToLocation(6 * movementDirection)}) { (_) -> Void in
-                            UIView.animateWithDuration(0.06, delay: 0, options: .CurveEaseIn, animations: { () -> Void in
+        let movementDirection = (menu == .menuLeft) ? CGFloat(1) : CGFloat(-1)
+        UIView.animate(withDuration: 0.16, delay: 0, options: UIViewAnimationOptions.curveEaseOut, animations: {self.moveHorizontallyToLocation(30 * movementDirection)}) { (_) -> Void in
+            UIView.animate(withDuration: 0.1, delay: 0, options: .curveEaseIn, animations: {self.moveHorizontallyToLocation(0)}) { (_) -> Void in
+                UIView.animate(withDuration: 0.12, delay: 0, options: .curveEaseOut, animations: {self.moveHorizontallyToLocation(16 * movementDirection) }) { (_) -> Void in
+                    UIView.animate(withDuration: 0.08, delay: 0, options: .curveEaseIn, animations: { self.moveHorizontallyToLocation(0) }) { (_) -> Void in
+                        UIView.animate(withDuration: 0.08, delay: 0, options: .curveEaseOut, animations: { self.moveHorizontallyToLocation(6 * movementDirection)}) { (_) -> Void in
+                            UIView.animate(withDuration: 0.06, delay: 0, options: .curveEaseIn, animations: { () -> Void in
                                 self.moveHorizontallyToLocation(0)
                                 }) { (_) -> Void in
                                     completion?()
@@ -170,16 +170,18 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
         }
     }
     
-    func switchToViewController(viewController: UIViewController, withSlideOutAnimation: Bool, popType: PopType, andCompletion completion: (()->Void)?) {
-        if avoidSwitchingToSameClassViewController && topViewController?.dynamicType === viewController.self {
+    func switchToViewController(_ viewController: UIViewController, withSlideOutAnimation: Bool, popType: PopType, andCompletion completion: (()->Void)?) {
+        if let topViewController = topViewController {
+            if avoidSwitchingToSameClassViewController && type(of: topViewController) === viewController.self {
             closeMenuWithCompletion(completion)
             return
+            }
         }
         let switchAndCallCompletion = { (closeMenuBeforeCallingCompletion: Bool) -> Void in
-            if popType == .All {
+            if popType == .all {
                 self.viewControllers = [viewController]
             } else {
-                super.popToRootViewControllerAnimated(false)
+                super.popToRootViewController(animated: false)
                 super.pushViewController(viewController, animated: false)
             }
             
@@ -191,7 +193,7 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
         }
         if isMenuOpen {
             if withSlideOutAnimation {
-                UIView.animateWithDuration(menuRevealAnimationDuration, delay: 0, options: menuRevealAnimationOption, animations: { let width = self.horizontalLocation; let moveLocation = self.horizontalLocation > 0 ? width : -1 * width; self.moveHorizontallyToLocation(moveLocation)}, completion: { (_)-> Void in switchAndCallCompletion(true)})
+                UIView.animate(withDuration: menuRevealAnimationDuration, delay: 0, options: menuRevealAnimationOption, animations: { let width = self.horizontalLocation; let moveLocation = self.horizontalLocation > 0 ? width : -1 * width; self.moveHorizontallyToLocation(moveLocation)}, completion: { (_)-> Void in switchAndCallCompletion(true)})
             } else {
                 switchAndCallCompletion(true)
             }
@@ -199,31 +201,31 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
             switchAndCallCompletion(false)
         }
     }
-    func switchToViewController(viewController: UIViewController, withCompletion completion:(()->Void)?) {
-        self.switchToViewController(viewController, withSlideOutAnimation: true, popType: .Root, andCompletion: completion)
+    func switchToViewController(_ viewController: UIViewController, withCompletion completion:(()->Void)?) {
+        self.switchToViewController(viewController, withSlideOutAnimation: true, popType: .root, andCompletion: completion)
     }
-    func popToRootAndSwitch(toViewController: UIViewController, withSlideOutAnimation:Bool, andCompletion completion:(()->Void)? ) {
-        self.switchToViewController(toViewController, withSlideOutAnimation: withSlideOutAnimation, popType: .Root, andCompletion: completion)
+    func popToRootAndSwitch(_ toViewController: UIViewController, withSlideOutAnimation:Bool, andCompletion completion:(()->Void)? ) {
+        self.switchToViewController(toViewController, withSlideOutAnimation: withSlideOutAnimation, popType: .root, andCompletion: completion)
     }
-    func popToRootAndSwitch(toViewController: UIViewController, withCompletioncompletion completion:(()->Void)? ) {
-        self.switchToViewController(toViewController, withSlideOutAnimation: true, popType: .Root, andCompletion: completion)
-    }
-    
-    func popAllAndSwitch(toViewController: UIViewController, withSlideOutAnimation: Bool, andCompletion completion: (()->Void)? ) {
-        self.switchToViewController(toViewController, withSlideOutAnimation: withSlideOutAnimation, popType: .All, andCompletion: completion)
+    func popToRootAndSwitch(_ toViewController: UIViewController, withCompletioncompletion completion:(()->Void)? ) {
+        self.switchToViewController(toViewController, withSlideOutAnimation: true, popType: .root, andCompletion: completion)
     }
     
-    func popAllAndSwitch(toViewController: UIViewController, withCompletion completion: (()->Void)?) {
-        self.switchToViewController(toViewController, withSlideOutAnimation: true, popType: .All, andCompletion: completion)
+    func popAllAndSwitch(_ toViewController: UIViewController, withSlideOutAnimation: Bool, andCompletion completion: (()->Void)? ) {
+        self.switchToViewController(toViewController, withSlideOutAnimation: withSlideOutAnimation, popType: .all, andCompletion: completion)
+    }
+    
+    func popAllAndSwitch(_ toViewController: UIViewController, withCompletion completion: (()->Void)?) {
+        self.switchToViewController(toViewController, withSlideOutAnimation: true, popType: .all, andCompletion: completion)
     }
     
     func toggleLeftMenu() {
-        toggle(.MenuLeft, withCompletion: nil)
+        toggle(.menuLeft, withCompletion: nil)
     }
     func toggleRightMenu() {
-        toggle(.MenuRight, withCompletion: nil)
+        toggle(.menuRight, withCompletion: nil)
     }
-    func toggle(menu: SlideMenu, withCompletion completion:(()->Void)?) {
+    func toggle(_ menu: SlideMenu, withCompletion completion:(()->Void)?) {
         if isMenuOpen {
             closeMenuWithCompletion(completion)
         } else {
@@ -231,27 +233,27 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
         }
     }
     
-    private var horizontalLocation : CGFloat {
+    fileprivate var horizontalLocation : CGFloat {
         get {
             let rect = view.frame
-            let orient = UIApplication.sharedApplication().statusBarOrientation
-            if UIDevice.currentDevice().systemVersion.compare("8.0", options:.NumericSearch, range: nil, locale: nil) != NSComparisonResult.OrderedAscending {
+            let orient = UIApplication.shared.statusBarOrientation
+            if UIDevice.current.systemVersion.compare("8.0", options:.numeric, range: nil, locale: nil) != ComparisonResult.orderedAscending {
                 return rect.origin.x
             } else {
                 if UIInterfaceOrientationIsLandscape(orient) {
-                    return orient == .LandscapeRight ? rect.origin.y : rect.origin.y * -1
+                    return orient == .landscapeRight ? rect.origin.y : rect.origin.y * -1
                 } else {
-                    return orient == .Portrait ? rect.origin.x : rect.origin.x * -1
+                    return orient == .portrait ? rect.origin.x : rect.origin.x * -1
                 }
             }
         }
     }
     
-    private var horizontalSize : CGFloat {
+    fileprivate var horizontalSize : CGFloat {
         get {
             let rect = view.frame
-            let orient = UIApplication.sharedApplication().statusBarOrientation
-            if UIDevice.currentDevice().systemVersion.compare("8.0", options:.NumericSearch, range: nil, locale: nil) != NSComparisonResult.OrderedAscending {
+            let orient = UIApplication.shared.statusBarOrientation
+            if UIDevice.current.systemVersion.compare("8.0", options:.numeric, range: nil, locale: nil) != ComparisonResult.orderedAscending {
                 return rect.size.width
             } else {
                 if UIInterfaceOrientationIsLandscape(orient) {
@@ -264,20 +266,20 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
     }
     
     
-    func postNotification(name: String, forMenu menu: SlideMenu) {
-        let menuString = menu == .MenuLeft ? "left" : "right"
+    func postNotification(_ name: String, forMenu menu: SlideMenu) {
+        let menuString = menu == .menuLeft ? "left" : "right"
         let userInfo = ["menu" : menuString]
-        NSNotificationCenter.defaultCenter().postNotificationName(name, object: nil, userInfo: userInfo)
+        NotificationCenter.default.post(name: Notification.Name(rawValue: name), object: nil, userInfo: userInfo)
     }
     
     // UINavigationControllerDelegate
     
-    func navigationController(navigationController: UINavigationController, willShowViewController viewController: UIViewController, animated: Bool) {
-        if self.shouldDisplayMenu(.MenuLeft, forViewController: viewController) {
-            viewController.navigationItem.leftBarButtonItem = barButtonItemForMenu(.MenuLeft)
+    func navigationController(_ navigationController: UINavigationController, willShow viewController: UIViewController, animated: Bool) {
+        if self.shouldDisplayMenu(.menuLeft, forViewController: viewController) {
+            viewController.navigationItem.leftBarButtonItem = barButtonItemForMenu(.menuLeft)
         }
-        if self.shouldDisplayMenu(.MenuRight, forViewController: viewController) {
-            viewController.navigationItem.rightBarButtonItem = barButtonItemForMenu(.MenuRight)
+        if self.shouldDisplayMenu(.menuRight, forViewController: viewController) {
+            viewController.navigationItem.rightBarButtonItem = barButtonItemForMenu(.menuRight)
         }
     }
     
@@ -288,45 +290,45 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
         }
     }
     
-    func closeMenuWithCompletion(completion: (()->Void)?) {
+    func closeMenuWithCompletion(_ completion: (()->Void)?) {
         closeMenu(menuRevealAnimationDuration, completion:completion)
     }
     
-    func open(menu: SlideMenu, withCompletion completion: (()->Void)?) {
+    func open(_ menu: SlideMenu, withCompletion completion: (()->Void)?) {
         open(menu, withDuration: self.menuRevealAnimationDuration, andCompletion:completion)
     }
     
     // IBActions
-    func leftMenuSelected(sender: AnyObject?) {
+    func leftMenuSelected(_ sender: AnyObject?) {
         if isMenuOpen {
             closeMenuWithCompletion(nil)
         } else {
-            open(.MenuLeft, withCompletion:nil)
+            open(.menuLeft, withCompletion:nil)
         }
     }
-    func rightMenuSelected(sender: AnyObject?) {
+    func rightMenuSelected(_ sender: AnyObject?) {
         if isMenuOpen {
             closeMenuWithCompletion(nil)
         } else {
-            open(.MenuRight, withCompletion:nil)
+            open(.menuRight, withCompletion:nil)
         }
     }
     // Private Methods
-    private var initialRectForMenu : CGRect {
+    fileprivate var initialRectForMenu : CGRect {
         get {
             var rect = self.view.frame
             rect.origin.x = 0
             rect.origin.y = 0
-            if UIDevice.currentDevice().systemVersion.compare("7.0", options:.NumericSearch, range: nil, locale: nil) != NSComparisonResult.OrderedAscending {
+            if UIDevice.current.systemVersion.compare("7.0", options:.numeric, range: nil, locale: nil) != ComparisonResult.orderedAscending {
                 return rect
             }
-            let orient = UIApplication.sharedApplication().statusBarOrientation
+            let orient = UIApplication.shared.statusBarOrientation
             if UIInterfaceOrientationIsLandscape(orient) {
-                rect.origin.x = (orient == .LandscapeRight) ? 0 : 20 // status bar height
+                rect.origin.x = (orient == .landscapeRight) ? 0 : 20 // status bar height
                 rect.size.width = view.frame.size.width
                     - 20
             } else {
-                rect.origin.y = (orient == .Portrait) ? 20 : 0 // status bar height
+                rect.origin.y = (orient == .portrait) ? 20 : 0 // status bar height
                 rect.size.width = view.frame.size.height
                     - 20
             }
@@ -335,25 +337,25 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
         }
     }
     
-    private func prepareMenuForReveal(menu: SlideMenu) {
+    fileprivate func prepareMenuForReveal(_ menu: SlideMenu) {
         if let last = lastRevealedMenu {
             if menu == last {
                 return
             }
         }
-        let menuViewController = menu == .MenuLeft ? leftMenu : rightMenu
-        let removingMenuViewController = menu == .MenuLeft ? rightMenu : leftMenu
+        let menuViewController = menu == .menuLeft ? leftMenu : rightMenu
+        let removingMenuViewController = menu == .menuLeft ? rightMenu : leftMenu
         lastRevealedMenu = menu
         
         removingMenuViewController?.view.removeFromSuperview()
         if let subview = menuViewController?.view {
-            self.view.window?.insertSubview(subview, atIndex: 0)
+            self.view.window?.insertSubview(subview, at: 0)
             self.updateMenuFrameAndTransformAccordingToOrientation()
             menuRevealAnimator?.prepareMenuForAnimation(menu)
         }
     }
     
-    private func updateMenuFrameAndTransformAccordingToOrientation(){
+    fileprivate func updateMenuFrameAndTransformAccordingToOrientation(){
         let transform = view.transform
         leftMenu?.view.transform = transform
         rightMenu?.view.transform = transform
@@ -361,68 +363,70 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
         leftMenu?.view.frame = initialRectForMenu
         rightMenu?.view.frame = initialRectForMenu
     }
-    private func enableTapGestureToCloseMenu(enable : Bool) {
+    fileprivate func enableTapGestureToCloseMenu(_ enable : Bool) {
         if enable {
-            if UIDevice.currentDevice().systemVersion.compare("7.0", options:.NumericSearch, range: nil, locale: nil) != NSComparisonResult.OrderedAscending {
-                self.interactivePopGestureRecognizer?.enabled = false
+            if UIDevice.current.systemVersion.compare("7.0", options:.numeric, range: nil, locale: nil) != ComparisonResult.orderedAscending {
+                self.interactivePopGestureRecognizer?.isEnabled = false
             }
             
-            self.topViewController?.view.userInteractionEnabled = false
+            self.topViewController?.view.isUserInteractionEnabled = false
             self.view.addGestureRecognizer(self.tapRecognizer)
         } else {
-            if UIDevice.currentDevice().systemVersion.compare("7.0", options:.NumericSearch, range: nil, locale: nil) != NSComparisonResult.OrderedAscending {
-                self.interactivePopGestureRecognizer?.enabled = true
+            if UIDevice.current.systemVersion.compare("7.0", options:.numeric, range: nil, locale: nil) != ComparisonResult.orderedAscending {
+                self.interactivePopGestureRecognizer?.isEnabled = true
             }
             
-            self.topViewController?.view.userInteractionEnabled = true
+            self.topViewController?.view.isUserInteractionEnabled = true
             self.view.removeGestureRecognizer(self.tapRecognizer)
         }
     }
-    private func toggle(menu: SlideMenu, withCompletion completion: ()->Void) {
+    fileprivate func toggle(_ menu: SlideMenu, withCompletion completion: @escaping ()->Void) {
         if isMenuOpen {
             closeMenuWithCompletion(completion)
         } else {
             open(menu, withCompletion:completion)
         }
     }
-    private func barButtonItemForMenu(menu : SlideMenu) -> UIBarButtonItem{
-        let selector = menu == .MenuLeft ? "leftMenuSelected:" : "rightMenuSelected:"
+    fileprivate func barButtonItemForMenu(_ menu : SlideMenu) -> UIBarButtonItem{
+        let selector = menu == .menuLeft ? "leftMenuSelected:" : "rightMenuSelected:"
         
-        if let customButton = menu == .MenuLeft ? self.leftBarButtonItem : self.rightBarButtonItem {
+        if let customButton = menu == .menuLeft ? self.leftBarButtonItem : self.rightBarButtonItem {
             customButton.action = Selector(selector)
             customButton.target = self
             return customButton
         } else  {
             let image = UIImage(named: "menu-button")
-            return UIBarButtonItem(image: image, style: .Plain, target: self, action: Selector(selector))
+            return UIBarButtonItem(image: image, style: .plain, target: self, action: Selector(selector))
         }
         
     }
-    private func shouldDisplayMenu(menu: SlideMenu, forViewController vc: UIViewController?) -> Bool {
+    fileprivate func shouldDisplayMenu(_ menu: SlideMenu, forViewController vc: UIViewController?) -> Bool {
         guard let _ = vc else {return false}
-        switch menu {
-        case .MenuRight:
-            if vc!.respondsToSelector(Selector("slideNavigationControllerShouldDisplayRightMenu")){
-                if let _ = vc as? SSlideNavigationControllerDelegate {
+        if let vc = vc as? SSlideNavigationControllerDelegate {
+            switch menu {
+            case .menuRight:
+                if vc.responds(to: #selector(SSlideNavigationControllerDelegate.slideNavigationControllerShouldDisplayRightMenu)) {
                     return true
                 }
                 
-            }
-        case .MenuLeft:
-            if vc!.respondsToSelector(Selector("slideNavigationControllerShouldDisplayLeftMenu")){
-                if let _ = vc as? SSlideNavigationControllerDelegate {
+            case .menuLeft:
+                if vc.responds(to:#selector(SSlideNavigationControllerDelegate.slideNavigationControllerShouldDisplayLeftMenu)) {
                     return true
                 }
+//                if vc.responds(to: #selector(SSlideNavigationControllerDelegate.slideNavigationControllerShouldDisplayLeftMenu")) {
+//                    return true
+            
             }
         }
+    
         return false
     }
-    private func open(menu: SlideMenu, withDuration duration : NSTimeInterval, andCompletion completion: (()->Void)?) {
+    fileprivate func open(_ menu: SlideMenu, withDuration duration : TimeInterval, andCompletion completion: (()->Void)?) {
         enableTapGestureToCloseMenu(true)
         prepareMenuForReveal(menu)
-        UIView.animateWithDuration(duration, delay: 0, options: self.menuRevealAnimationOption, animations: { () -> Void in
+        UIView.animate(withDuration: duration, delay: 0, options: self.menuRevealAnimationOption, animations: { () -> Void in
             let width = self.horizontalSize
-            let x = menu == .MenuLeft ? width - self.slideOffset : -(width - self.slideOffset)
+            let x = menu == .menuLeft ? width - self.slideOffset : -(width - self.slideOffset)
             self.moveHorizontallyToLocation(x)
             }) { (_) -> Void in
                 completion?()
@@ -436,10 +440,10 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
         //                self.postNotification(SlideNavigationControllerDidClose, forMenu: menu)
         //        }
     }
-    private func closeMenu(duration : NSTimeInterval, completion: (()->Void)?) {
+    fileprivate func closeMenu(_ duration : TimeInterval, completion: (()->Void)?) {
         enableTapGestureToCloseMenu(false)
-        let menu: SlideMenu = horizontalLocation > 0 ? .MenuLeft : .MenuRight
-        UIView.animateWithDuration(duration, delay: 0, options: menuRevealAnimationOption, animations: { () -> Void in
+        let menu: SlideMenu = horizontalLocation > 0 ? .menuLeft : .menuRight
+        UIView.animate(withDuration: duration, delay: 0, options: menuRevealAnimationOption, animations: { () -> Void in
             self.moveHorizontallyToLocation(0)
             }) { (_) -> Void in
                 completion?()
@@ -449,22 +453,22 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
     
     
     
-    private func moveHorizontallyToLocation(location: CGFloat) {
+    fileprivate func moveHorizontallyToLocation(_ location: CGFloat) {
         var rect =  self.view.frame
-        let orient = UIApplication.sharedApplication().statusBarOrientation
-        let menu: SlideMenu = horizontalLocation >= 0 && location >= 0 ? .MenuLeft : .MenuRight
+        let orient = UIApplication.shared.statusBarOrientation
+        let menu: SlideMenu = horizontalLocation >= 0 && location >= 0 ? .menuLeft : .menuRight
         if location > 0 && horizontalLocation <= 0 || location < 0 && horizontalLocation >= 0 {
-            self.postNotification(SlideNavigationControllerDidReveal, forMenu: location > 0 ? .MenuLeft : .MenuRight)
+            self.postNotification(SlideNavigationControllerDidReveal, forMenu: location > 0 ? .menuLeft : .menuRight)
         }
-        if UIDevice.currentDevice().systemVersion.compare("7.0", options:.NumericSearch, range: nil, locale: nil) != NSComparisonResult.OrderedAscending {
+        if UIDevice.current.systemVersion.compare("7.0", options:.numeric, range: nil, locale: nil) != ComparisonResult.orderedAscending {
             rect.origin.x = location
             rect.origin.y = 0
         } else {
             if UIInterfaceOrientationIsLandscape(orient) {
                 rect.origin.x = 0
-                rect.origin.y = orient == .LandscapeRight ? location : location * -1
+                rect.origin.y = orient == .landscapeRight ? location : location * -1
             } else {
-                rect.origin.x = orient == .Portrait ? location : location * -1
+                rect.origin.x = orient == .portrait ? location : location * -1
                 rect.origin.y = 0
             }
         }
@@ -473,38 +477,38 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
         updateMenuAnimation(menu)
     }
     
-    private func updateMenuAnimation(menu: SlideMenu) {
-        let progress : CGFloat = menu == .MenuLeft ? (horizontalLocation / (horizontalSize - slideOffset)) : (horizontalLocation / ((horizontalSize - slideOffset) * -1))
+    fileprivate func updateMenuAnimation(_ menu: SlideMenu) {
+        let progress : CGFloat = menu == .menuLeft ? (horizontalLocation / (horizontalSize - slideOffset)) : (horizontalLocation / ((horizontalSize - slideOffset) * -1))
         menuRevealAnimator?.animate(menu, withProgress: progress)
     }
     
     
     // Gesture Recognizing
-    func tapDetected(tapRecognizer: UITapGestureRecognizer) {
+    func tapDetected(_ tapRecognizer: UITapGestureRecognizer) {
         self.closeMenuWithCompletion(nil)
     }
-    func gestureRecognizer(gestureRecognizer: UIGestureRecognizer, shouldReceiveTouch touch: UITouch) -> Bool {
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
         if panGestureSideOffset == 0 {
             return true
         }
-        let pointInView = touch.locationInView(self.view)
+        let pointInView = touch.location(in: self.view)
         let horizontalSize = self.horizontalSize
         return pointInView.x <= panGestureSideOffset || pointInView.x >= horizontalSize - self.panGestureSideOffset
     }
     var lastHorizontalLocation = CGFloat(0)
-    func panDetected(panRecognizer: UIPanGestureRecognizer) {
-        let translation = panRecognizer.translationInView(panRecognizer.view)
-        let velocity = panRecognizer.velocityInView(panRecognizer.view)
+    func panDetected(_ panRecognizer: UIPanGestureRecognizer) {
+        let translation = panRecognizer.translation(in: panRecognizer.view)
+        let velocity = panRecognizer.velocity(in: panRecognizer.view)
         let movement = translation.x - self.draggingPoint.x
         
         let horizontalLoc = self.horizontalLocation
         var  currentMenu : SlideMenu
         if horizontalLoc > 0 {
-            currentMenu = .MenuLeft
+            currentMenu = .menuLeft
         } else if horizontalLoc < 0 {
-            currentMenu = .MenuRight
+            currentMenu = .menuRight
         } else {
-            currentMenu = translation.x > 0 ? .MenuLeft : .MenuRight
+            currentMenu = translation.x > 0 ? .menuLeft : .menuRight
         }
         guard self.shouldDisplayMenu(currentMenu, forViewController: self.topViewController) else {
             return
@@ -512,9 +516,9 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
         self.prepareMenuForReveal(currentMenu)
         
         switch panRecognizer.state {
-        case .Began:
+        case .began:
             draggingPoint = translation
-        case .Changed:
+        case .changed:
             
             lastHorizontalLocation = horizontalLocation
             let newHorizontalLocation = lastHorizontalLocation + movement
@@ -522,15 +526,15 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
                 moveHorizontallyToLocation(newHorizontalLocation)
             }
             draggingPoint = translation
-        case .Ended:
+        case .ended:
             let currentX = horizontalLocation
             let currentXOffset = fabs(currentX)
             let positiveVelocity = fabs(velocity.x)
             
             // positiveVelocity >= MENU_FAST_VELOCITY_FOR_SWIPE_FOLLOW_DIRECTION
             if positiveVelocity >= 1200 {
-                let quickAnimationDuration = NSTimeInterval(0.18)
-                let menu : SlideMenu = velocity.x > 0 ? .MenuLeft : .MenuRight
+                let quickAnimationDuration = TimeInterval(0.18)
+                let menu : SlideMenu = velocity.x > 0 ? .menuLeft : .menuRight
                 if velocity.x > 0 {
                     if currentX > 0 {
                         if shouldDisplayMenu(menu, forViewController: self.visibleViewController) {
@@ -553,7 +557,7 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
                 if currentXOffset < (horizontalSize - slideOffset) / 2 {
                     self.closeMenuWithCompletion(nil)
                 } else {
-                    open( currentX > 0 ? .MenuLeft : .MenuRight, withCompletion:nil)
+                    open( currentX > 0 ? .menuLeft : .menuRight, withCompletion:nil)
                 }
             }
         default:
@@ -562,12 +566,12 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
     }
     var slideOffset: CGFloat {
         get {
-            return UIInterfaceOrientationIsLandscape(UIApplication.sharedApplication().statusBarOrientation) ? landscapeSlideOffset : portraitSlideOffset
+            return UIInterfaceOrientationIsLandscape(UIApplication.shared.statusBarOrientation) ? landscapeSlideOffset : portraitSlideOffset
         }
     }
     var minXForDragging: CGFloat {
         get {
-            if self.shouldDisplayMenu(.MenuRight, forViewController: self.topViewController!) {
+            if self.shouldDisplayMenu(.menuRight, forViewController: self.topViewController!) {
                 return (self.horizontalSize - self.slideOffset) * -1
             }
             return 0
@@ -575,31 +579,31 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
     }
     var maxXForDragging: CGFloat {
         get {
-            if self.shouldDisplayMenu(.MenuLeft, forViewController: self.topViewController!) {
+            if self.shouldDisplayMenu(.menuLeft, forViewController: self.topViewController!) {
                 return (self.horizontalSize - self.slideOffset)
             }
             return 0
         }
     }
     
-    override func popToRootViewControllerAnimated(animated: Bool) -> [UIViewController]? {
+    override func popToRootViewController(animated: Bool) -> [UIViewController]? {
         if isMenuOpen {
             closeMenuWithCompletion({
-                super.popToRootViewControllerAnimated(animated)
+                super.popToRootViewController(animated: animated)
             })
         } else {
-            return super.popToRootViewControllerAnimated(animated)
+            return super.popToRootViewController(animated: animated)
         }
         return nil
     }
-    override func pushViewController(viewController: UIViewController, animated: Bool) {
+    override func pushViewController(_ viewController: UIViewController, animated: Bool) {
         if isMenuOpen {
             closeMenuWithCompletion { super.pushViewController(viewController, animated: animated)}
         } else {
             super.pushViewController(viewController, animated: animated)
         }
     }
-    override func popToViewController(viewController: UIViewController, animated: Bool) -> [UIViewController]? {
+    override func popToViewController(_ viewController: UIViewController, animated: Bool) -> [UIViewController]? {
         if isMenuOpen {
             closeMenuWithCompletion({
                 super.popToViewController(viewController, animated: animated)
@@ -623,7 +627,7 @@ class SlideNavigationController: UINavigationController, UINavigationControllerD
 class SlideNavigationControllerAnimatorFade: NSObject, SlideNavigationControllerAnimator {
     var maximumFadeAlpha: CGFloat
     var fadeColor: UIColor
-    private var fadeAnimationView : UIView!
+    fileprivate var fadeAnimationView : UIView!
     init(maximumFadeAlpha: CGFloat, fadeColor: UIColor) {
         self.maximumFadeAlpha = maximumFadeAlpha
         self.fadeColor = fadeColor
@@ -631,18 +635,18 @@ class SlideNavigationControllerAnimatorFade: NSObject, SlideNavigationController
         self.fadeAnimationView.backgroundColor = fadeColor
     }
     convenience override init() {
-        self.init(maximumFadeAlpha: 0.8, fadeColor: UIColor.blackColor())
+        self.init(maximumFadeAlpha: 0.8, fadeColor: UIColor.black)
     }
     
-    func prepareMenuForAnimation(menu: SlideMenu) {
-        let menuViewController : UIViewController = menu == .MenuLeft ? SlideNavigationController.sharedInstance!.leftMenu! : SlideNavigationController.sharedInstance!.rightMenu!
+    func prepareMenuForAnimation(_ menu: SlideMenu) {
+        let menuViewController : UIViewController = menu == .menuLeft ? SlideNavigationController.sharedInstance!.leftMenu! : SlideNavigationController.sharedInstance!.rightMenu!
         
         self.fadeAnimationView.alpha = self.maximumFadeAlpha
         self.fadeAnimationView.frame = menuViewController.view.bounds
     }
     
-    func animate(menu: SlideMenu, withProgress progress: CGFloat) {
-        let menuViewController : UIViewController = menu == .MenuLeft ? SlideNavigationController.sharedInstance!.leftMenu! : SlideNavigationController.sharedInstance!.rightMenu!
+    func animate(_ menu: SlideMenu, withProgress progress: CGFloat) {
+        let menuViewController : UIViewController = menu == .menuLeft ? SlideNavigationController.sharedInstance!.leftMenu! : SlideNavigationController.sharedInstance!.rightMenu!
         
         fadeAnimationView.alpha = self.maximumFadeAlpha
         fadeAnimationView.frame = menuViewController.view.bounds
@@ -661,64 +665,64 @@ class SlideNavigationContorllerAnimatorSlide: NSObject, SlideNavigationControlle
         self.init(slideMovement: 100)
     }
     
-    func prepareMenuForAnimation(menu: SlideMenu) {
-        let menuViewController : UIViewController = menu == .MenuLeft ? SlideNavigationController.sharedInstance!.leftMenu! : SlideNavigationController.sharedInstance!.rightMenu!
+    func prepareMenuForAnimation(_ menu: SlideMenu) {
+        let menuViewController : UIViewController = menu == .menuLeft ? SlideNavigationController.sharedInstance!.leftMenu! : SlideNavigationController.sharedInstance!.rightMenu!
         
-        let orient = UIApplication.sharedApplication().statusBarOrientation
+        let orient = UIApplication.shared.statusBarOrientation
         var rect = menuViewController.view.frame
-        if UIDevice.currentDevice().systemVersion.compare("8.0", options:.NumericSearch, range: nil, locale: nil) != NSComparisonResult.OrderedAscending {
-            rect.origin.x = menu == .MenuLeft ? -slideMovement : slideMovement
+        if UIDevice.current.systemVersion.compare("8.0", options:.numeric, range: nil, locale: nil) != ComparisonResult.orderedAscending {
+            rect.origin.x = menu == .menuLeft ? -slideMovement : slideMovement
         } else {
             if UIInterfaceOrientationIsLandscape(orient) {
-                if orient == .LandscapeRight {
-                    rect.origin.y = menu == .MenuLeft ? -slideMovement : slideMovement
+                if orient == .landscapeRight {
+                    rect.origin.y = menu == .menuLeft ? -slideMovement : slideMovement
                 } else {
-                    rect.origin.y = menu == .MenuRight ? -slideMovement : slideMovement
+                    rect.origin.y = menu == .menuRight ? -slideMovement : slideMovement
                 }
             } else {
-                if orient == .Portrait {
-                    rect.origin.x = menu == .MenuLeft ? -slideMovement : slideMovement
+                if orient == .portrait {
+                    rect.origin.x = menu == .menuLeft ? -slideMovement : slideMovement
                 } else {
-                    rect.origin.x = menu == .MenuRight ? -slideMovement : slideMovement
+                    rect.origin.x = menu == .menuRight ? -slideMovement : slideMovement
                 }
             }
             
         }
     }
-    func animate(menu: SlideMenu, withProgress progress: CGFloat) {
-        let menuViewController : UIViewController = menu == .MenuLeft ? SlideNavigationController.sharedInstance!.leftMenu! : SlideNavigationController.sharedInstance!.rightMenu!
+    func animate(_ menu: SlideMenu, withProgress progress: CGFloat) {
+        let menuViewController : UIViewController = menu == .menuLeft ? SlideNavigationController.sharedInstance!.leftMenu! : SlideNavigationController.sharedInstance!.rightMenu!
         
-        let orient = UIApplication.sharedApplication().statusBarOrientation
+        let orient = UIApplication.shared.statusBarOrientation
         var location :CGFloat
         switch menu {
-        case .MenuLeft:
+        case .menuLeft:
             location = min(0, slideMovement * (progress - 1))
-        case .MenuRight:
+        case .menuRight:
             location = max(0, slideMovement * (1 - progress))
         }
         
         var rect = menuViewController.view.frame
         
-        if UIDevice.currentDevice().systemVersion.compare("8.0", options:.NumericSearch, range: nil, locale: nil) != NSComparisonResult.OrderedAscending {
+        if UIDevice.current.systemVersion.compare("8.0", options:.numeric, range: nil, locale: nil) != ComparisonResult.orderedAscending {
             rect.origin.x = location
         } else {
             if UIInterfaceOrientationIsLandscape(orient) {
-                rect.origin.y = orient == .LandscapeRight ? location : location * -1
+                rect.origin.y = orient == .landscapeRight ? location : location * -1
             } else {
-                rect.origin.x = orient == .Portrait ? location : location * -1
+                rect.origin.x = orient == .portrait ? location : location * -1
             }
         }
         menuViewController.view.frame = rect
     }
     func clear() {
-        clear(.MenuLeft)
-        clear(.MenuRight)
+        clear(.menuLeft)
+        clear(.menuRight)
     }
-    func clear(menu: SlideMenu) {
-        let menuViewController : UIViewController = menu == .MenuLeft ? SlideNavigationController.sharedInstance!.leftMenu! : SlideNavigationController.sharedInstance!.rightMenu!
-        let orient = UIApplication.sharedApplication().statusBarOrientation
+    func clear(_ menu: SlideMenu) {
+        let menuViewController : UIViewController = menu == .menuLeft ? SlideNavigationController.sharedInstance!.leftMenu! : SlideNavigationController.sharedInstance!.rightMenu!
+        let orient = UIApplication.shared.statusBarOrientation
         var rect = menuViewController.view.frame
-        if UIDevice.currentDevice().systemVersion.compare("8.0", options:.NumericSearch, range: nil, locale: nil) != NSComparisonResult.OrderedAscending {
+        if UIDevice.current.systemVersion.compare("8.0", options:.numeric, range: nil, locale: nil) != ComparisonResult.orderedAscending {
             rect.origin.x = 0
         } else {
             if UIInterfaceOrientationIsLandscape(orient) {
