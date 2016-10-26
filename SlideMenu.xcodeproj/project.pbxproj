@@ -41,9 +41,9 @@
 		15E7D321190C3B75002EAE3F /* rightMenu.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 15E7D320190C3B75002EAE3F /* rightMenu.jpg */; };
 		15E7D327190C3DAE002EAE3F /* gear.png in Resources */ = {isa = PBXBuildFile; fileRef = 15E7D326190C3DAE002EAE3F /* gear.png */; };
 		997929E2187336AA00716C77 /* FriendsViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 997929E1187336AA00716C77 /* FriendsViewController.m */; };
-		DB59C4601BC114BE0042E9B1 /* menu-button.png in Resources */ = {isa = PBXBuildFile; fileRef = 15CBD6BF172BBB7100F0C53E /* menu-button.png */; settings = {ASSET_TAGS = (); }; };
-		DB59C4611BC114BE0042E9B1 /* menu-button@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 15CBD6BD172BBB3600F0C53E /* menu-button@2x.png */; settings = {ASSET_TAGS = (); }; };
-		DB59C4691BCAE67F0042E9B1 /* SlideNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB59C4681BCAE67F0042E9B1 /* SlideNavigation.swift */; settings = {ASSET_TAGS = (); }; };
+		DB59C4601BC114BE0042E9B1 /* menu-button.png in Resources */ = {isa = PBXBuildFile; fileRef = 15CBD6BF172BBB7100F0C53E /* menu-button.png */; };
+		DB59C4611BC114BE0042E9B1 /* menu-button@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 15CBD6BD172BBB3600F0C53E /* menu-button@2x.png */; };
+		DB59C4691BCAE67F0042E9B1 /* SlideNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB59C4681BCAE67F0042E9B1 /* SlideNavigation.swift */; };
 		DB91D1991BBFD8A000F6544D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB91D1981BBFD8A000F6544D /* AppDelegate.swift */; };
 		DB91D19B1BBFD8A000F6544D /* MasterViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB91D19A1BBFD8A000F6544D /* MasterViewController.swift */; };
 		DB91D1A01BBFD8A000F6544D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = DB91D19E1BBFD8A000F6544D /* Main.storyboard */; };
@@ -433,6 +433,12 @@
 				LastUpgradeCheck = 0500;
 				ORGANIZATIONNAME = "Aryan Ghassemi";
 				TargetAttributes = {
+					15371EDD1728E3B400A508F4 = {
+						LastSwiftMigration = 0800;
+					};
+					15371F071728E3B400A508F4 = {
+						LastSwiftMigration = 0800;
+					};
 					DB91D1951BBFD8A000F6544D = {
 						CreatedOnToolsVersion = 7.0.1;
 					};
@@ -703,6 +709,7 @@
 				INFOPLIST_FILE = "SlideMenu/SlideMenu-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -715,6 +722,7 @@
 				INFOPLIST_FILE = "SlideMenu/SlideMenu-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
@@ -732,6 +740,7 @@
 				GCC_PREFIX_HEADER = "SlideMenu/SlideMenu-Prefix.pch";
 				INFOPLIST_FILE = "SlideMenuTests/SlideMenuTests-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
 				TEST_HOST = "$(BUNDLE_LOADER)";
 			};
 			name = Debug;
@@ -749,6 +758,7 @@
 				GCC_PREFIX_HEADER = "SlideMenu/SlideMenu-Prefix.pch";
 				INFOPLIST_FILE = "SlideMenuTests/SlideMenuTests-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
 				TEST_HOST = "$(BUNDLE_LOADER)";
 			};
 			name = Release;
